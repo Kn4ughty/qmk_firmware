@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include QMK_KEYBOARD_H
+// #include "rgblight.h"
 
 enum custom_layers {
      _QWERTY,
@@ -104,6 +105,30 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     uint8_t b = data[i+3];
     rgb_matrix_set_color(index, r, g, b);
     // KeyRGB key = bytes_to_keydata[i+0]
+    // rgb_matrix_mode(RGB_MATRIX_CUSTOM_my_cool_effect);
 
     // rgb_matrix_toggle();
+}
+
+// bool rgb_matrix_indicators_kb(void) {
+//     if (!rgb_matrix_indicators_user()) {
+//         return false;
+//     }
+//     rgb_matrix_set_color(index, red, green, blue);
+//     return true;
+// }
+
+
+void keyboard_post_init_user(void) {
+    rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
+    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+}
+
+bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    for (uint8_t i = led_min; i < led_max; i++) {
+        // if (g_led_config.flags[i] & LED_FLAG_MODIFIER) {
+            rgb_matrix_set_color(i, RGB_WHITE);
+        // }
+    }
+    return false;
 }
