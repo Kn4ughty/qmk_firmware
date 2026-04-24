@@ -34,7 +34,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
      KC_DEL,  KC_LEFT, KC_DOWN, KC_RGHT, _______, KC_LBRC,                            KC_RBRC, KC_P4,   KC_P5,   KC_P6,   KC_PLUS, KC_PIPE,
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
-     RM_NEXT, _______, _______, _______, _______, KC_LCBR, KC_LPRN,          KC_RPRN, KC_RCBR, KC_P1,   KC_P2,   KC_P3,   KC_MINS, _______,
+     _______, _______, _______, _______, _______, KC_LCBR, KC_LPRN,          KC_RPRN, KC_RCBR, KC_P1,   KC_P2,   KC_P3,   KC_MINS, _______,
   //└────────┴────────┴────────┴───┬────┴───┬────┴───┬────┴───┬────┘        └───┬────┴───┬────┴───┬────┴───┬────┴────────┴────────┴────────┘
                                     _______, _______, KC_DEL,                    KC_DEL,  _______, KC_P0
                                 // └────────┴────────┴────────┘                 └────────┴────────┴────────┘
@@ -57,7 +57,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
   //┌────────┬────────┬────────┬────────┬────────┬────────┐                          ┌────────┬────────┬────────┬────────┬────────┬────────┐
      _______, _______, MS_BTN3, _______, _______, _______,                            QK_BOOT, _______, _______, _______, _______, _______,
   //├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
-     RM_TOGG, _______, MS_UP,   _______, _______,  _______,                           _______, _______, MS_WHLU, _______, _______, _______,
+     RM_TOGG, _______, MS_UP,   _______, _______,  _______,                           _______, _______, MS_WHLU, _______, RM_NEXT, _______,
   //├────────┼────────┼────────┼────────┼────────┼────────┤                          ├────────┼────────┼────────┼────────┼────────┼────────┤
      _______, MS_LEFT, MS_DOWN, MS_RGHT, _______, _______,                            _______, MS_BTN1, MS_WHLD, MS_BTN2, _______, _______,
   //├────────┼────────┼────────┼────────┼────────┼────────┼────────┐        ┌────────┼────────┼────────┼────────┼────────┼────────┼────────┤
@@ -67,3 +67,43 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
                                 // └────────┴────────┴────────┘                 └────────┴────────┴────────┘
   ),
 };
+
+typedef struct key_rgb {
+    uint8_t index;
+    uint8_t r;
+    uint8_t g;
+    uint8_t b;
+} KeyRGB;
+
+KeyRGB bytes_to_key(uint8_t bytes[4]) {
+    struct key_rgb key = {
+        bytes[0],
+        bytes[1],
+        bytes[2],
+        bytes[3],
+    };
+    return key;
+}
+
+void raw_hid_receive(uint8_t *data, uint8_t length) {
+    // Your code goes here
+    // `data` is a pointer to the buffer containing the received HID report
+    // `length` is the length of the report - always `RAW_EPSIZE`
+
+    // uint8_t response[length];
+    // memset(response, 0, length);
+    // response[0] = 'B';
+
+    // if(data[0] == 'A') {
+    //     host_raw_hid_send(response, length);
+    // }
+    int i = 0;
+    uint8_t index = data[i+0];
+    uint8_t r = data[i+1];
+    uint8_t g = data[i+2];
+    uint8_t b = data[i+3];
+    rgb_matrix_set_color(index, r, g, b);
+    // KeyRGB key = bytes_to_keydata[i+0]
+
+    // rgb_matrix_toggle();
+}
