@@ -92,10 +92,10 @@ KeyRGB bytes_to_key(uint8_t bytes[4]) {
 #include "transactions.h"
 // void transaction_register_rpc(int8_t transaction_id, slave_callback_t callback);
 
-#define COLS 6
+#define COLS 16
 
-static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0};
-// static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+// static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0};
+static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {
     for (int i =0; i < COLS; i++) {
@@ -104,29 +104,29 @@ void raw_hid_receive(uint8_t *data, uint8_t length) {
     }
 }
 
-#define USER_SYNC_A 1
+// #define USER_SYNC_A 1
 
-// void user_sync_amps_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
-//     dprintf("Slave sync success");
-//     if (in_buflen == COLS) {
-//         memcpy(AMPS, in_data, COLS);
-//     }
-// }
-//
-//
-// void housekeeping_task_user(void) {
-//     if (is_keyboard_master()) {
-//         static uint32_t last_sync = 0;
-//         if (timer_elapsed32(last_sync)> 10) {
-//             if (transaction_rpc_send(USER_SYNC_A, COLS, &AMPS)) {
-//                 last_sync = timer_read32();
-//                 dprint("Slave sync worked!\n");
-//             } else {
-//                 dprint("Slave sync failed!\n");
-//             }
-//         }
-//     }
-// }
+void user_sync_amps_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
+    dprintf("Slave sync success");
+    if (in_buflen == COLS) {
+        memcpy(AMPS, in_data, COLS);
+    }
+}
+
+
+void housekeeping_task_user(void) {
+    if (is_keyboard_master()) {
+        static uint32_t last_sync = 0;
+        if (timer_elapsed32(last_sync)> 100) {
+            if (transaction_rpc_send(USER_SYNC_A, COLS, &AMPS)) {
+                last_sync = timer_read32();
+                dprint("Slave sync worked!\n");
+            } else {
+                dprint("Slave sync failed!\n");
+            }
+        }
+    }
+}
 
 void keyboard_post_init_user(void) {
     // debug_enable=true;
@@ -135,12 +135,13 @@ void keyboard_post_init_user(void) {
     rgb_matrix_enable_noeeprom();
     rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
     rgb_matrix_sethsv_noeeprom(0, 0, 0);
-    // transaction_register_rpc(USER_SYNC_A, user_sync_amps_slave_handler);
+    transaction_register_rpc(USER_SYNC_A, user_sync_amps_slave_handler);
 }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    // for (uint8_t i = led_min; i < led_max; i++) {
-    for (int col=0; col < COLS; col++) {
+
+    // LHS of keyboard
+    for (int col=0; col < COLS/2; col++) {
 
 
         int amp = AMPS[col];
@@ -153,19 +154,45 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 
             uint8_t b = amp*(((float)(row+1) / 4));
 
-            // if col >= 6 {
-            //     // Skip middle buttons
-            //     uint8_t led_index = g_led_config.matrix_co[3-row][col+];
-            // } else {
-            uint8_t led_index = g_led_config.matrix_co[3-row][col];
-            // }
+            int led_col = col;
+            int led_row = row;
+
+            uint8_t led_index = g_led_config.matrix_co[3-led_row][led_col];
+
+            rgb_matrix_set_color(led_index, r, 0, b);
+        }
+    }
+
+    // If the current collumn (y) is greater than 4, we are on second half
+    // Then, we need to skip one row to go past thumb keys
+    // Then, we need to take the extra collumns above the 3rd, and turn them into rows.
+    // This is bc the halves are arranged one on top of another
+
+    // RHS
+    int offset = 3;
+    for (int col=COLS/2 + offset; col < COLS+offset; col++) {
+
+        int amp = AMPS[col-offset];
+
+        int h_max = ceil( ((float)(amp)/255) *4 )-1;
+
+        for (int row=h_max; row >= 0; row--) {
+
+            uint8_t r = 255*(((float)(row+1) / 4));
+
+            uint8_t b = amp*(((float)(row+1) / 4));
+
+            int led_col = col - COLS / 2;
+            int led_row = row + 5;
+
+            uint8_t led_index = g_led_config.matrix_co[led_row][led_col];
 
             rgb_matrix_set_color(led_index, r, 0, b);
         }
     }
 
     uint8_t led_index = g_led_config.matrix_co[6][5];
-    rgb_matrix_set_color(led_index, 255, 0, 255);
+    rgb_matrix_set_color(led_index, AMPS[10], 0, AMPS[10]);
 
     return false;
 }

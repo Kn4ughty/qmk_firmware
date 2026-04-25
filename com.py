@@ -10,7 +10,7 @@ import math
 import json
 from colour import Color
 
-BARS_NUMBER = 6
+BARS_NUMBER = 11
 OUTPUT_BIT_FORMAT = "8bit"
 # OUTPUT_BIT_FORMAT = "16bit"
 # RAW_TARGET = "/tmp/cava.fifo"
@@ -88,9 +88,9 @@ def run(interface):
                 break
             # sample = [i for i in struct.unpack(fmt, data)]  # raw values without norming
             sample = [i / bytenorm for i in struct.unpack(fmt, data)]
-            assert(len(sample) == 6)
+            assert(len(sample) == BARS_NUMBER)
             out = [int(255*i) for i in sample]
-            # print(out)
+            print(out)
             send_raw(interface, out)
 
 
