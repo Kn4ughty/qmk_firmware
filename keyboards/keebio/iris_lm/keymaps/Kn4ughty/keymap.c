@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include QMK_KEYBOARD_H
-// #include "rgblight.h"
 
 enum custom_layers {
      _QWERTY,
@@ -86,49 +85,87 @@ KeyRGB bytes_to_key(uint8_t bytes[4]) {
     return key;
 }
 
+#include <math.h>
+// #define SPLIT_TRANSACTION_RPC
+
+// #include "quantum/split_common/transactions.h"
+#include "transactions.h"
+// void transaction_register_rpc(int8_t transaction_id, slave_callback_t callback);
+
+#define COLS 6
+
+static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0};
+// static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    // Your code goes here
-    // `data` is a pointer to the buffer containing the received HID report
-    // `length` is the length of the report - always `RAW_EPSIZE`
-
-    // uint8_t response[length];
-    // memset(response, 0, length);
-    // response[0] = 'B';
-
-    // if(data[0] == 'A') {
-    //     host_raw_hid_send(response, length);
-    // }
-    int i = 0;
-    uint8_t index = data[i+0];
-    uint8_t r = data[i+1];
-    uint8_t g = data[i+2];
-    uint8_t b = data[i+3];
-    rgb_matrix_set_color(index, r, g, b);
-    // KeyRGB key = bytes_to_keydata[i+0]
-    // rgb_matrix_mode(RGB_MATRIX_CUSTOM_my_cool_effect);
-
-    // rgb_matrix_toggle();
+    for (int i =0; i < COLS; i++) {
+        uint8_t amp = data[i];
+        AMPS[i] = amp;
+    }
 }
 
-// bool rgb_matrix_indicators_kb(void) {
-//     if (!rgb_matrix_indicators_user()) {
-//         return false;
+#define USER_SYNC_A 1
+
+// void user_sync_amps_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
+//     dprintf("Slave sync success");
+//     if (in_buflen == COLS) {
+//         memcpy(AMPS, in_data, COLS);
 //     }
-//     rgb_matrix_set_color(index, red, green, blue);
-//     return true;
+// }
+//
+//
+// void housekeeping_task_user(void) {
+//     if (is_keyboard_master()) {
+//         static uint32_t last_sync = 0;
+//         if (timer_elapsed32(last_sync)> 10) {
+//             if (transaction_rpc_send(USER_SYNC_A, COLS, &AMPS)) {
+//                 last_sync = timer_read32();
+//                 dprint("Slave sync worked!\n");
+//             } else {
+//                 dprint("Slave sync failed!\n");
+//             }
+//         }
+//     }
 // }
 
-
 void keyboard_post_init_user(void) {
+    // debug_enable=true;
+    // debug_matrix=true;
+
+    rgb_matrix_enable_noeeprom();
     rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
-    rgb_matrix_sethsv_noeeprom(HSV_OFF);
+    rgb_matrix_sethsv_noeeprom(0, 0, 0);
+    // transaction_register_rpc(USER_SYNC_A, user_sync_amps_slave_handler);
 }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    for (uint8_t i = led_min; i < led_max; i++) {
-        // if (g_led_config.flags[i] & LED_FLAG_MODIFIER) {
-            rgb_matrix_set_color(i, RGB_WHITE);
-        // }
+    // for (uint8_t i = led_min; i < led_max; i++) {
+    for (int col=0; col < COLS; col++) {
+
+
+        int amp = AMPS[col];
+
+        int h_max = ceil( ((float)(amp)/255) *4 )-1;
+
+        for (int row=h_max; row >= 0; row--) {
+
+            uint8_t r = 255*(((float)(row+1) / 4));
+
+            uint8_t b = amp*(((float)(row+1) / 4));
+
+            // if col >= 6 {
+            //     // Skip middle buttons
+            //     uint8_t led_index = g_led_config.matrix_co[3-row][col+];
+            // } else {
+            uint8_t led_index = g_led_config.matrix_co[3-row][col];
+            // }
+
+            rgb_matrix_set_color(led_index, r, 0, b);
+        }
     }
+
+    uint8_t led_index = g_led_config.matrix_co[6][5];
+    rgb_matrix_set_color(led_index, 255, 0, 255);
+
     return false;
 }

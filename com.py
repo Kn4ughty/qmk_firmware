@@ -1,5 +1,37 @@
 import sys
 import hid
+import time
+import random
+import os
+import struct
+import subprocess
+import tempfile
+import math
+import json
+from colour import Color
+
+BARS_NUMBER = 6
+OUTPUT_BIT_FORMAT = "8bit"
+# OUTPUT_BIT_FORMAT = "16bit"
+# RAW_TARGET = "/tmp/cava.fifo"
+RAW_TARGET = "/dev/stdout"
+
+conpat = """
+[general]
+bars = %d
+; autosens = 0
+; sensitivity = 200
+[output]
+method = raw
+raw_target = %s
+bit_format = %s
+channels = mono
+"""
+
+config = conpat % (BARS_NUMBER, RAW_TARGET, OUTPUT_BIT_FORMAT)
+bytetype, bytesize, bytenorm = (
+    ("H", 2, 65535) if OUTPUT_BIT_FORMAT == "16bit" else ("B", 1, 255)
+)
 
 vendor_id     = 0xCB10
 product_id    = 0x1656
@@ -22,35 +54,63 @@ def get_raw_hid_interface():
 
     return interface
 
-def send_raw_report(data):
-    interface = get_raw_hid_interface()
 
-    if interface is None:
-        print("No device found")
-        sys.exit(1)
-
+def send_raw(interface, data):
     request_data = [0x00] * (report_length + 1) # First byte is Report ID
     request_data[1:len(data) + 1] = data
     request_report = bytes(request_data)
 
-    print("Request:")
-    print(request_report)
+    interface.write(request_report)
+    # _ = interface.read(report_length, timeout=0)
 
-    try:
-        interface.write(request_report)
 
-        response_report = interface.read(report_length, timeout=1000)
+def run(interface):
+    with tempfile.NamedTemporaryFile() as config_file:
+        config_file.write(config.encode())
+        config_file.flush()
 
-        print("Response:")
-        print(response_report)
-    finally:
-        interface.close()
+        process = subprocess.Popen(
+            ["cava", "-p", config_file.name], stdout=subprocess.PIPE
+        )
+        chunk = bytesize * BARS_NUMBER
+        fmt = bytetype * BARS_NUMBER
+
+        if RAW_TARGET != "/dev/stdout":
+            if not os.path.exists(RAW_TARGET):
+                os.mkfifo(RAW_TARGET)
+            source = open(RAW_TARGET, "rb")
+        else:
+            source = process.stdout
+
+        while True:
+            data = source.read(chunk)
+            if len(data) < chunk:
+                break
+            # sample = [i for i in struct.unpack(fmt, data)]  # raw values without norming
+            sample = [i / bytenorm for i in struct.unpack(fmt, data)]
+            assert(len(sample) == 6)
+            out = [int(255*i) for i in sample]
+            # print(out)
+            send_raw(interface, out)
+
+
 
 if __name__ == '__main__':
-    for i in range(0,30):
-        send_raw_report([
-            i,
-            0xFF,
-            0x00,
-            0xFF,
-        ])
+    interface = get_raw_hid_interface()
+    if interface is None:
+        sys.exit(1)
+
+    try:
+        run(interface)
+        # for i in range(0,10):
+        #     send_raw(interface, [
+        #         int(255*random.random()),
+        #         int(255*random.random()),
+        #         int(255*random.random()),
+        #         int(255*random.random()),
+        #         int(255*random.random()),
+        #         int(255*random.random()),
+        #     ])
+            # time.sleep(0.1);
+    finally:
+        interface.close()
