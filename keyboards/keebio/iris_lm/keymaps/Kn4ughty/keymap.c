@@ -92,7 +92,7 @@ KeyRGB bytes_to_key(uint8_t bytes[4]) {
 #include "transactions.h"
 // void transaction_register_rpc(int8_t transaction_id, slave_callback_t callback);
 
-#define COLS 16
+#define COLS 12
 
 // static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0};
 static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -139,9 +139,28 @@ void keyboard_post_init_user(void) {
 }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
+    // Set base colour
+    // for (uint8_t i = led_min; i < led_max; i++) {
+    //     uint8_t r = 2;
+    //     uint8_t g = 2;
+    //     uint8_t b = 3;
+    //     rgb_matrix_set_color(i, r, g, b);
+    // }
+    uint8_t t_r = 10;
+    uint8_t t_g = 10;
+    uint8_t t_b = 15;
+
+    for (int col = 2; col <= 5; col++) {
+        rgb_matrix_set_color(g_led_config.matrix_co[4][col], t_r, t_g, t_b); // orange, for example
+    }
+
+    // RHS thumb keys
+    for (int col = 2; col <= 5; col++) {
+        rgb_matrix_set_color(g_led_config.matrix_co[9][col], t_r, t_g, t_b);
+    }
 
     // LHS of keyboard
-    for (int col=0; col < COLS/2; col++) {
+    for (int col=0; col < 6; col++) {
 
 
         int amp = AMPS[col];
@@ -169,10 +188,9 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     // This is bc the halves are arranged one on top of another
 
     // RHS
-    int offset = 3;
-    for (int col=COLS/2 + offset; col < COLS+offset; col++) {
+    for (int col=0; col < 6; col++) {
 
-        int amp = AMPS[col-offset];
+        int amp = AMPS[col+6];
 
         int h_max = ceil( ((float)(amp)/255) *4 )-1;
 
@@ -182,8 +200,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 
             uint8_t b = amp*(((float)(row+1) / 4));
 
-            int led_col = col - COLS / 2;
-            int led_row = row + 5;
+            int led_col = 5 - col;
+            int led_row = 8 - row;
 
             uint8_t led_index = g_led_config.matrix_co[led_row][led_col];
 
@@ -191,8 +209,8 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
         }
     }
 
-    uint8_t led_index = g_led_config.matrix_co[6][5];
-    rgb_matrix_set_color(led_index, AMPS[10], 0, AMPS[10]);
+    // uint8_t led_index = g_led_config.matrix_co[6][5];
+    // rgb_matrix_set_color(led_index, AMPS[10], 0, AMPS[10]);
 
     return false;
 }

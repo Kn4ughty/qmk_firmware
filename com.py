@@ -10,7 +10,7 @@ import math
 import json
 from colour import Color
 
-BARS_NUMBER = 11
+BARS_NUMBER = 12
 OUTPUT_BIT_FORMAT = "8bit"
 # OUTPUT_BIT_FORMAT = "16bit"
 # RAW_TARGET = "/tmp/cava.fifo"
@@ -25,7 +25,8 @@ bars = %d
 method = raw
 raw_target = %s
 bit_format = %s
-channels = mono
+channels = stereo
+; channels = mono
 """
 
 config = conpat % (BARS_NUMBER, RAW_TARGET, OUTPUT_BIT_FORMAT)
