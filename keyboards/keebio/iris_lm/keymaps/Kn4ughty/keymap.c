@@ -86,25 +86,18 @@ KeyRGB bytes_to_key(uint8_t bytes[4]) {
 }
 
 #include <math.h>
-// #define SPLIT_TRANSACTION_RPC
+#define min(a, b) ((a) < (b) ? (a) : (b))
 
-// #include "quantum/split_common/transactions.h"
 #include "transactions.h"
-// void transaction_register_rpc(int8_t transaction_id, slave_callback_t callback);
 
 #define COLS 12
 
-// static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0};
 static uint8_t AMPS[COLS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    for (int i =0; i < COLS; i++) {
-        uint8_t amp = data[i];
-        AMPS[i] = amp;
-    }
+    // length will always be 32, so this will not read past end of *data
+    memcpy(AMPS, data, COLS);
 }
-
-// #define USER_SYNC_A 1
 
 void user_sync_amps_slave_handler(uint8_t in_buflen, const void *in_data, uint8_t out_buflen, void *out_data) {
     dprintf("Slave sync success");
@@ -113,11 +106,10 @@ void user_sync_amps_slave_handler(uint8_t in_buflen, const void *in_data, uint8_
     }
 }
 
-
 void housekeeping_task_user(void) {
     if (is_keyboard_master()) {
         static uint32_t last_sync = 0;
-        if (timer_elapsed32(last_sync)> 100) {
+        if (timer_elapsed32(last_sync) > 16) {
             if (transaction_rpc_send(USER_SYNC_A, COLS, &AMPS)) {
                 last_sync = timer_read32();
                 dprint("Slave sync worked!\n");
@@ -129,9 +121,6 @@ void housekeeping_task_user(void) {
 }
 
 void keyboard_post_init_user(void) {
-    // debug_enable=true;
-    // debug_matrix=true;
-
     rgb_matrix_enable_noeeprom();
     rgb_matrix_mode_noeeprom(RGB_MATRIX_SOLID_COLOR);
     rgb_matrix_sethsv_noeeprom(0, 0, 0);
@@ -139,13 +128,13 @@ void keyboard_post_init_user(void) {
 }
 
 bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
-    // Set base colour
-    // for (uint8_t i = led_min; i < led_max; i++) {
-    //     uint8_t r = 2;
-    //     uint8_t g = 2;
-    //     uint8_t b = 3;
-    //     rgb_matrix_set_color(i, r, g, b);
-    // }
+    // Set base colour for small backlight
+    for (uint8_t i = led_min; i < led_max; i++) {
+        uint8_t r = 2;
+        uint8_t g = 2;
+        uint8_t b = 3;
+        rgb_matrix_set_color(i, r, g, b);
+    }
     uint8_t t_r = 10;
     uint8_t t_g = 10;
     uint8_t t_b = 15;
@@ -162,15 +151,13 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
     // LHS of keyboard
     for (int col=0; col < 6; col++) {
 
-
         int amp = AMPS[col];
-
         int h_max = ceil( ((float)(amp)/255) *4 )-1;
 
         for (int row=h_max; row >= 0; row--) {
 
             uint8_t r = 255*(((float)(row+1) / 4));
-
+            uint8_t g = 0;
             uint8_t b = amp*(((float)(row+1) / 4));
 
             int led_col = col;
@@ -178,7 +165,7 @@ bool rgb_matrix_indicators_advanced_user(uint8_t led_min, uint8_t led_max) {
 
             uint8_t led_index = g_led_config.matrix_co[3-led_row][led_col];
 
-            rgb_matrix_set_color(led_index, r, 0, b);
+            rgb_matrix_set_color(led_index, r, g, b);
         }
     }
 

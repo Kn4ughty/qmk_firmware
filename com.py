@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import hid
 import time
@@ -25,8 +26,8 @@ bars = %d
 method = raw
 raw_target = %s
 bit_format = %s
-channels = stereo
-; channels = mono
+;channels = stereo
+channels = mono
 """
 
 config = conpat % (BARS_NUMBER, RAW_TARGET, OUTPUT_BIT_FORMAT)
@@ -83,6 +84,7 @@ def run(interface):
         else:
             source = process.stdout
 
+        # start_time = time.perf_counter()
         while True:
             data = source.read(chunk)
             if len(data) < chunk:
@@ -93,6 +95,10 @@ def run(interface):
             out = [int(255*i) for i in sample]
             print(out)
             send_raw(interface, out)
+            # end_time = time.perf_counter()
+            # elapsed_time = (end_time - start_time) * 1000
+            # print(f"Elapsed: {elapsed_time:.2f}ms")
+            # start_time = time.perf_counter()
 
 
 
@@ -103,15 +109,5 @@ if __name__ == '__main__':
 
     try:
         run(interface)
-        # for i in range(0,10):
-        #     send_raw(interface, [
-        #         int(255*random.random()),
-        #         int(255*random.random()),
-        #         int(255*random.random()),
-        #         int(255*random.random()),
-        #         int(255*random.random()),
-        #         int(255*random.random()),
-        #     ])
-            # time.sleep(0.1);
     finally:
         interface.close()
